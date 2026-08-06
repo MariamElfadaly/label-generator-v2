@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Label Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16211F;
+    --paper:#FFFFFF;
+    --bg:#F5F7F6;
+    --slate:#5B6B68;
+    --slate-soft:#8B9895;
+    --line:#DBE3E1;
+    --line-soft:#E8ECEB;
+    --primary:#1C4A45;
+    --primary-dark:#123430;
+    --wash:#EAF1EF;
+    --green:#2F6B4F;
+    --green-wash:#EBF3EE;
+    --amber:#8A6A1F;
+    --amber-wash:#F5F0E2;
+    --danger:#9C3B2E;
+    --danger-wash:#F7EAE8;
+    --r:5px;
+    --display:'IBM Plex Sans', 'Segoe UI', sans-serif;
+    --sans:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; font-family:var(--sans); background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--primary); color:#fff; }
+  button{ font-family:var(--sans); }
+
+  /* ---------- Login gate ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:
+      linear-gradient(var(--bg), var(--bg)),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--line-soft) 39px, var(--line-soft) 40px);
+  }
+  .login-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:6px;
+    padding:38px 36px; width:100%; max-width:380px;
+  }
+  .login-eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--slate); margin-bottom:10px; }
+  .login-card h1{ font-family:var(--display); font-size:19px; font-weight:600; margin:0 0 6px; }
+  .login-card p{ font-size:13px; color:var(--slate); margin:0 0 24px; line-height:1.5; }
+  .field-label{ display:block; font-size:11.5px; font-weight:600; color:var(--slate); margin-bottom:6px; letter-spacing:.01em; }
+  .login-card input{ width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:var(--r); font-size:14px; margin-bottom:14px; font-family:var(--sans); color:var(--ink); }
+  .login-card input:focus{ outline:none; border-color:var(--primary); }
+  .login-card button{ width:100%; padding:12px; border:none; border-radius:var(--r); background:var(--primary); color:#fff; font-weight:600; font-size:13.5px; cursor:pointer; letter-spacing:.02em; }
+  .login-card button:hover{ background:var(--primary-dark); }
+  #loginError{ color:var(--danger); font-size:12.5px; margin-top:10px; min-height:16px; }
+
+  /* ---------- App shell: sidebar + main ---------- */
+  #app{ display:none; min-height:100vh; }
+  .shell{ display:flex; min-height:100vh; }
+
+  .sidebar{
+    width:236px; flex-shrink:0; background:var(--primary); color:#fff;
+    display:flex; flex-direction:column; padding:26px 18px;
+  }
+  .sb-brand{ padding:0 6px 22px; border-bottom:1px solid rgba(255,255,255,0.14); margin-bottom:18px; }
+  .sb-brand .eyebrow{ font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,0.55); margin-bottom:6px; }
+  .sb-brand h1{ font-family:var(--display); font-size:16px; font-weight:600; margin:0; line-height:1.3; }
+
+  .sb-nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .sb-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--r);
+    background:none; border:none; color:rgba(255,255,255,0.72); font-size:13.5px; font-weight:500;
+    cursor:pointer; text-align:left; width:100%;
+  }
+  .sb-item .idx{ font-family:var(--mono); font-size:11px; color:rgba(255,255,255,0.45); width:16px; }
+  .sb-item:hover{ background:rgba(255,255,255,0.06); color:#fff; }
+  .sb-item.active{ background:rgba(255,255,255,0.12); color:#fff; }
+  .sb-item.active .idx{ color:rgba(255,255,255,0.8); }
+
+  .sb-foot{ border-top:1px solid rgba(255,255,255,0.14); padding-top:16px; margin-top:16px; }
+  .sb-foot .who{ font-size:12px; color:rgba(255,255,255,0.6); margin-bottom:10px; word-break:break-all; }
+  .sb-signout{ background:none; border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.85); padding:8px 12px; border-radius:var(--r); font-size:12px; cursor:pointer; width:100%; }
+  .sb-signout:hover{ border-color:rgba(255,255,255,0.5); }
+
+  .main{ flex:1; padding:34px 44px 60px; max-width:980px; }
+  .page-head{ margin-bottom:26px; }
+  .page-head .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--slate); margin-bottom:6px; }
+  .page-head h2{ font-family:var(--display); font-size:21px; font-weight:600; margin:0 0 6px; }
+  .page-head p{ font-size:13px; color:var(--slate); margin:0; max-width:520px; line-height:1.5; }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:26px; }
+  .card + .card{ margin-top:18px; }
+  .card-title{ font-family:var(--display); font-size:13.5px; font-weight:600; margin:0 0 3px; }
+  .card-note{ font-size:12px; color:var(--slate); margin:0 0 20px; line-height:1.5; }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+  .form-group{ margin-bottom:15px; }
+  .form-group label{ display:block; font-size:11.5px; font-weight:600; color:var(--slate); margin-bottom:6px; letter-spacing:.01em; }
+  .form-group input{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r); font-size:14px; font-family:var(--sans); color:var(--ink); }
+  .form-group input:focus{ outline:none; border-color:var(--primary); }
+  .form-group input[dir="rtl"]{ text-align:right; }
+  .hint{ font-size:11px; color:var(--slate-soft); margin-top:5px; }
+
+  .btn{ border:none; border-radius:var(--r); padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.01em; }
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-primary:hover{ background:var(--primary-dark); }
+  .btn-primary:disabled{ background:#A9BEB9; cursor:not-allowed; }
+  .btn-outline{ background:none; border:1px solid var(--line); color:var(--ink); }
+  .btn-outline:hover{ border-color:var(--slate-soft); }
+  .btn-danger-outline{ background:none; border:1px solid var(--line); color:var(--danger); }
+  .btn-danger-outline:hover{ border-color:var(--danger); background:var(--danger-wash); }
+  .btn-sm{ padding:6px 11px; font-size:12px; }
+  .btn-text{ background:none; border:none; color:var(--primary); font-size:12.5px; font-weight:600; cursor:pointer; padding:4px 6px; }
+  .btn-text:hover{ text-decoration:underline; }
+  .btn-text.danger{ color:var(--danger); }
+  .btn-row{ display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+
+  .status{ font-size:12.5px; margin-top:12px; padding:9px 12px; border-radius:var(--r); display:none; border:1px solid transparent; }
+  .status.show{ display:block; }
+  .status.ok{ background:var(--green-wash); color:var(--green); border-color:#CFE3D6; }
+  .status.err{ background:var(--danger-wash); color:var(--danger); border-color:#EAD0CC; }
+  .status.info{ background:var(--wash); color:var(--primary); border-color:#CFDFDB; }
+
+  .preview-wrap{ margin-top:22px; padding-top:22px; border-top:1px solid var(--line-soft); }
+  .preview-wrap h3{ font-family:var(--mono); font-size:11px; color:var(--slate); text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px; font-weight:600; }
+  #previewFrame{ width:100%; height:150px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+
+  /* ---------- Bulk import ---------- */
+  .drop{ border:1px dashed var(--line); border-radius:6px; padding:28px 20px; text-align:center; cursor:pointer; background:var(--bg); }
+  .drop:hover{ border-color:var(--primary); background:var(--wash); }
+  .drop .lbl{ font-size:13px; color:var(--ink); font-weight:600; }
+  .drop p{ margin:5px 0 0; font-size:12px; color:var(--slate); }
+  #bulkFileInput{ display:none; }
+  table.data-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.data-table th{ text-align:left; background:var(--bg); padding:9px 12px; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--slate); border-bottom:1px solid var(--line); font-weight:600; }
+  table.data-table td{ padding:9px 12px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+  table.data-table tr:hover td{ background:var(--bg); }
+  table.data-table td[dir="rtl"]{ text-align:right; }
+  .row-bad td{ background:var(--danger-wash); }
+  .row-bad:hover td{ background:var(--danger-wash); }
+  .tag{ display:inline-block; font-family:var(--mono); font-size:10px; font-weight:600; padding:2px 7px; border-radius:3px; letter-spacing:.02em; }
+  .tag-new{ background:var(--green-wash); color:var(--green); }
+  .tag-update{ background:var(--amber-wash); color:var(--amber); }
+  .tag-bad{ background:var(--danger-wash); color:var(--danger); }
+
+  /* ---------- Dashboard / registry table ---------- */
+  .dash-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .search{ flex:1; min-width:200px; max-width:300px; }
+  .search input{ width:100%; padding:9px 12px; border:1px solid var(--line); border-radius:var(--r); font-size:13px; font-family:var(--sans); }
+  .search input:focus{ outline:none; border-color:var(--primary); }
+  .count-chip{ font-family:var(--mono); font-size:11px; color:var(--slate); border:1px solid var(--line); padding:4px 10px; border-radius:20px; }
+
+  .registry-id{ font-family:var(--mono); font-weight:600; font-size:12.5px; color:var(--primary-dark); }
+  .registry-name{ font-weight:600; font-size:13px; color:var(--ink); }
+  .registry-name-ar{ font-size:12.5px; direction:rtl; color:var(--ink); font-family:'Segoe UI','Tahoma','Arial',sans-serif; }
+  .registry-title{ font-size:12px; color:var(--slate); }
+  .registry-title-ar{ font-size:12px; direction:rtl; color:var(--slate); font-family:'Segoe UI','Tahoma','Arial',sans-serif; }
+  .registry-actions{ white-space:nowrap; text-align:right; }
+  .empty-state{ text-align:center; padding:56px 20px; color:var(--slate); }
+  .empty-state .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--slate-soft); margin-bottom:8px; }
+  .empty-state p{ font-size:13px; margin:0; }
+
+  .modal-bg{ display:none; position:fixed; inset:0; background:rgba(22,33,31,0.55); align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal-bg.show{ display:flex; }
+  .modal{ background:#fff; border-radius:6px; padding:24px; max-width:420px; width:100%; }
+  .modal h3{ font-family:var(--display); margin:0 0 4px; font-size:14.5px; font-weight:600; }
+  .modal p{ font-size:12.5px; color:var(--slate); margin:0 0 18px; }
+  .modal-frame{ width:100%; height:150px; border:1px solid var(--line); border-radius:6px; margin-bottom:18px; }
+
+  @media (max-width:860px){
+    .shell{ flex-direction:column; }
+    .sidebar{ width:100%; flex-direction:row; align-items:center; padding:14px 18px; gap:16px; }
+    .sb-brand{ border:none; margin:0; padding:0; }
+    .sb-nav{ flex-direction:row; flex:1; }
+    .sb-foot{ border:none; margin:0; padding:0; }
+    .sb-foot .who{ display:none; }
+    .main{ padding:24px 18px 50px; }
+  }
+  @media (max-width:600px){
+    .grid-2{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================= LOGIN ======================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-eyebrow">Restricted access</div>
+    <h1>Employee Label Registry</h1>
+    <p>Sign in with the shared laboratory account to continue.</p>
+    <label class="field-label">Email</label>
+    <input type="email" id="loginEmail" autocomplete="username">
+    <label class="field-label">Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <button id="loginBtn">Sign in</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<!-- ======================= APP ======================= -->
+<div id="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sb-brand">
+        <div class="eyebrow">Internal system</div>
+        <h1>Employee Label<br>Registry</h1>
+      </div>
+      <nav class="sb-nav">
+        <button class="sb-item active" data-tab="add"><span class="idx">01</span> Add employee</button>
+        <button class="sb-item" data-tab="bulk"><span class="idx">02</span> Bulk import</button>
+        <button class="sb-item" data-tab="dash"><span class="idx">03</span> Registry</button>
+      </nav>
+      <div class="sb-foot">
+        <div class="who" id="whoami"></div>
+        <button class="sb-signout" id="signOutBtn">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- ---------------- ADD ONE ---------------- -->
+      <div class="panel active" id="panel-add">
+        <div class="page-head">
+          <div class="eyebrow">01 — Entry</div>
+          <h2 id="addFormTitle">Add a new employee</h2>
+          <p id="addFormSub">Saves directly to the shared registry. No need to re-enter these details later.</p>
+        </div>
+
+        <div class="card">
+          <form id="labelForm">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Employee ID</label>
+                <input type="text" id="f_id" placeholder="181" required>
+              </div>
+              <div class="form-group">
+                <label>QR code destination link</label>
+                <input type="url" id="f_qrLink" placeholder="https://drive.google.com/..." required>
+              </div>
+              <div class="form-group">
+                <label>Name — English</label>
+                <input type="text" id="f_nameEn" placeholder="Mahmoud Atia" required>
+              </div>
+              <div class="form-group">
+                <label>Name — Arabic</label>
+                <input type="text" id="f_nameAr" dir="rtl" placeholder="محمود احمد محمود عطيه قاعود" required>
+              </div>
+              <div class="form-group">
+                <label>Title — English</label>
+                <input type="text" id="f_titleEn" placeholder="Lab Chemist" required>
+              </div>
+              <div class="form-group">
+                <label>Title — Arabic</label>
+                <input type="text" id="f_titleAr" dir="rtl" placeholder="كميائى معمل" required>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" class="btn btn-primary" id="saveBtn">Save label</button>
+              <button type="button" class="btn btn-outline" id="cancelEditBtn" style="display:none;">Cancel edit</button>
+            </div>
+            <div class="status" id="addStatus"></div>
+          </form>
+
+          <div class="preview-wrap">
+            <h3>Preview</h3>
+            <iframe id="previewFrame"></iframe>
+            <div class="btn-row" style="margin-top:14px;">
+              <button type="button" class="btn btn-outline" id="downloadPdfBtn" disabled>Download PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- BULK IMPORT ---------------- -->
+      <div class="panel" id="panel-bulk">
+        <div class="page-head">
+          <div class="eyebrow">02 — Batch entry</div>
+          <h2>Bulk import from Excel</h2>
+          <p>Columns expected, any order, header row required: <strong>ID, Name EN, Name AR, Title EN, Title AR, QR Link</strong>. Existing IDs are updated; new IDs are added.</p>
+        </div>
+        <div class="card">
+          <div class="drop" id="dropZone">
+            <div class="lbl">Choose a file</div>
+            <p>or drag an .xlsx / .csv here</p>
+          </div>
+          <input type="file" id="bulkFileInput" accept=".xlsx,.xls,.csv">
+          <div id="bulkPreviewWrap" style="display:none; margin-top:18px;">
+            <div class="status show info" id="bulkSummary"></div>
+            <div style="overflow-x:auto; border:1px solid var(--line); border-radius:6px; margin-top:14px;">
+              <table class="data-table" id="bulkTable"></table>
+            </div>
+            <div class="btn-row" style="margin-top:16px;">
+              <button class="btn btn-primary" id="confirmImportBtn">Import valid rows</button>
+              <button class="btn btn-outline" id="cancelImportBtn">Cancel</button>
+            </div>
+            <div class="status" id="bulkStatus"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- DASHBOARD / REGISTRY ---------------- -->
+      <div class="panel" id="panel-dash">
+        <div class="page-head">
+          <div class="eyebrow">03 — Records</div>
+          <h2>Registry</h2>
+          <p>Every employee label saved so far. Search, preview, edit, or export.</p>
+        </div>
+        <div class="card">
+          <div class="dash-head">
+            <div class="search"><input type="text" id="searchInput" placeholder="Search by ID or name"></div>
+            <span class="count-chip" id="countPill">0 records</span>
+            <button class="btn btn-outline btn-sm" id="downloadAllBtn">Download all as PDF</button>
+          </div>
+          <div class="status" id="dashStatus"></div>
+          <div style="overflow-x:auto; border:1px solid var(--line); border-radius:6px;">
+            <table class="data-table" id="registryTable"></table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- preview modal for registry rows -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Label preview</h3>
+    <p>Full-size preview at 50 × 25.4 mm.</p>
+    <iframe class="modal-frame" id="modalFrame"></iframe>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm" id="modalPdfBtn">Download PDF</button>
+      <button class="btn btn-outline btn-sm" id="modalCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- hidden render target used for PDF capture -->
+<div id="renderTarget" style="position:fixed; top:-9999px; left:-9999px;"></div>
+
+<!-- ======================= LIBRARIES ======================= -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, getDocs, writeBatch, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+/* =========================================================
+   FIREBASE SETUP
+   1) Create a Firebase project (or reuse an existing one).
+   2) Enable Firestore (production mode) and Authentication → Email/Password.
+   3) Create ONE shared user under Authentication → Users (this is your
+      shared lab login, same pattern as your other tools).
+   4) Paste your web app config below.
+   5) Firestore rule to use (Firestore → Rules):
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /labels/{id} {
+              allow read, write: if request.auth != null;
+            }
+          }
+        }
+   6) In Google Cloud Console, restrict this API key to your GitHub Pages
+      HTTP referrer, same as you did for the Locker Room app.
+   ========================================================= */
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDjyI-tDJCvPHQ0CwnTHan31j62Oz5UxNU",
+  authDomain: "lockerroom-tracker.firebaseapp.com",
+  projectId: "lockerroom-tracker",
+  storageBucket: "lockerroom-tracker.firebasestorage.app",
+  messagingSenderId: "1065891397695",
+  appId: "1:1065891397695:web:aec6418ce3563ecd8c788a",
+  measurementId: "G-YW56HKPLQ9"
+};
+
+// Initialize Firebase
+// const app = initializeApp(firebaseConfig);
+// const analytics = getAnalytics(app);
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const labelsCol = collection(db, "labels");
+
+/* ---------------- state ---------------- */
+let allLabels = [];
+let editingId = null;
+let bulkRows = [];
+
+/* ---------------- auth ---------------- */
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("loginEmail").value.trim();
+  const pw = document.getElementById("loginPassword").value;
+  const errEl = document.getElementById("loginError");
+  errEl.textContent = "";
+  try {
+    await signInWithEmailAndPassword(auth, email, pw);
+  } catch (e) {
+    errEl.textContent = "Couldn't sign in — check the email and password.";
+  }
+});
+
+document.getElementById("signOutBtn").addEventListener("click", () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    document.getElementById("whoami").textContent = user.email || "";
+    loadLabels();
+  } else {
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("app").style.display = "none";
+  }
+});
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll(".sb-item").forEach(t => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".sb-item").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---------------- helpers: label markup ---------------- */
+function labelDocument(rec) {
+  const encodedUrl = encodeURIComponent(rec.qrLink || "");
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+  @page { size: 50mm 25.4mm; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0; font-family: system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+         background:#fff; -webkit-font-smoothing:antialiased; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .label { width:50mm; height:25.4mm; padding:1.3mm 3mm; display:flex; flex-direction:column; overflow:hidden; }
+  .header { display:flex; justify-content:space-between; align-items:center; border-bottom:1.1pt solid #000; padding-bottom:0.6mm; margin-bottom:0.8mm; }
+  .id { font-weight:800; font-size:9.5pt; color:#000; letter-spacing:0.5pt; line-height:1; }
+  .qr { width:7.8mm; height:7.8mm; flex-shrink:0; background:#fff; padding:0.3mm; display:flex; align-items:center; justify-content:center; }
+  .qr img { width:100%; height:100%; display:block; }
+  .body { display:flex; justify-content:space-between; align-items:flex-start; flex:1; padding-top:0.1mm; }
+  .col-left, .col-right { display:flex; flex-direction:column; gap:0.7mm; }
+  .name-en { font-weight:700; font-size:9.2pt; color:#000; line-height:1.12; letter-spacing:0.15pt; }
+  .name-ar { font-weight:800; font-size:10.8pt; color:#000; font-family:'Segoe UI','Traditional Arabic','Tahoma','Arial',sans-serif; direction:rtl; line-height:1.08; letter-spacing:0.25pt; }
+  .title-en { font-weight:400; font-size:7.8pt; color:#2a2a2a; line-height:1.12; margin-top:0.3mm; letter-spacing:0.25pt; }
+  .title-ar { font-weight:900; font-size:10.2pt; color:#000; font-family:'Segoe UI','Traditional Arabic','Tahoma','Arial',sans-serif; direction:rtl; line-height:1.08; margin-top:0.3mm; letter-spacing:0.35pt; }
+</style></head>
+<body>
+  <div class="label">
+    <div class="header">
+      <span class="id">ID: ${escapeHtml(rec.id)}</span>
+      <div class="qr"><img crossorigin="anonymous" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedUrl}"></div>
+    </div>
+    <div class="body">
+      <div class="col-left">
+        <div class="name-en">${escapeHtml(rec.nameEn)}</div>
+        <div class="title-en">${escapeHtml(rec.titleEn)}</div>
+      </div>
+      <div class="col-right">
+        <div class="name-ar">${escapeHtml(rec.nameAr)}</div>
+        <div class="title-ar">${escapeHtml(rec.titleAr)}</div>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+/* ---------------- PDF generation ---------------- */
+function renderLabelToCanvas(rec) {
+  return new Promise((resolve, reject) => {
+    const target = document.getElementById("renderTarget");
+    target.innerHTML = "";
+    const iframe = document.createElement("iframe");
+    iframe.style.width = "50mm";
+    iframe.style.height = "25.4mm";
+    iframe.style.border = "none";
+    target.appendChild(iframe);
+    iframe.srcdoc = labelDocument(rec);
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          const doc = iframe.contentDocument;
+          const el = doc.querySelector(".label");
+          html2canvas(el, { scale: 8, useCORS: true, backgroundColor: "#ffffff" })
+            .then(canvas => resolve(canvas))
+            .catch(reject);
+        } catch (e) { reject(e); }
+      }, 350);
+    };
+  });
+}
+
+async function downloadSinglePdf(rec, btnEl) {
+  const original = btnEl ? btnEl.textContent : null;
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = "Generating…"; }
+  try {
+    const canvas = await renderLabelToCanvas(rec);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: [50, 25.4] });
+    pdf.addImage(canvas.toDataURL("image/png", 1.0), "PNG", 0, 0, 50, 25.4);
+    pdf.save(`label_ID${rec.id}.pdf`);
+  } catch (e) {
+    alert("Couldn't generate that PDF. Check your internet connection (QR codes load from an external service) and try again.");
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = original; }
+  }
+}
+
+async function downloadAllPdf(records) {
+  if (!records.length) return;
+  const btn = document.getElementById("downloadAllBtn");
+  const original = btn.textContent;
+  const { jsPDF } = window.jspdf;
+  let pdf;
+  try {
+    for (let i = 0; i < records.length; i++) {
+      btn.textContent = `Generating ${i + 1}/${records.length}…`;
+      btn.disabled = true;
+      const canvas = await renderLabelToCanvas(records[i]);
+      if (i === 0) {
+        pdf = new jsPDF({ unit: "mm", format: [50, 25.4] });
+      } else {
+        pdf.addPage([50, 25.4]);
+      }
+      pdf.addImage(canvas.toDataURL("image/png", 1.0), "PNG", 0, 0, 50, 25.4);
+    }
+    pdf.save(`all_labels_${records.length}.pdf`);
+  } catch (e) {
+    alert("Something went wrong generating the combined PDF partway through. Try again, or download a few at a time.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+/* ---------------- Add / Edit form ---------------- */
+const form = document.getElementById("labelForm");
+const previewFrame = document.getElementById("previewFrame");
+const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+let currentRecord = null;
+
+function readForm() {
+  return {
+    id: document.getElementById("f_id").value.trim(),
+    nameEn: document.getElementById("f_nameEn").value.trim(),
+    nameAr: document.getElementById("f_nameAr").value.trim(),
+    titleEn: document.getElementById("f_titleEn").value.trim(),
+    titleAr: document.getElementById("f_titleAr").value.trim(),
+    qrLink: document.getElementById("f_qrLink").value.trim(),
+  };
+}
+
+function fillForm(rec) {
+  document.getElementById("f_id").value = rec.id;
+  document.getElementById("f_nameEn").value = rec.nameEn;
+  document.getElementById("f_nameAr").value = rec.nameAr;
+  document.getElementById("f_titleEn").value = rec.titleEn;
+  document.getElementById("f_titleAr").value = rec.titleAr;
+  document.getElementById("f_qrLink").value = rec.qrLink;
+  updatePreview();
+}
+
+function updatePreview() {
+  const rec = readForm();
+  if (!rec.id || !rec.nameEn) { downloadPdfBtn.disabled = true; return; }
+  currentRecord = rec;
+  previewFrame.srcdoc = labelDocument(rec);
+  downloadPdfBtn.disabled = false;
+}
+["f_id","f_nameEn","f_nameAr","f_titleEn","f_titleAr","f_qrLink"].forEach(id => {
+  document.getElementById(id).addEventListener("input", updatePreview);
+});
+
+downloadPdfBtn.addEventListener("click", () => {
+  if (currentRecord) downloadSinglePdf(currentRecord, downloadPdfBtn);
+});
+
+function showStatus(el, kind, msg) {
+  el.className = "status show " + kind;
+  el.textContent = msg;
+  setTimeout(() => el.classList.remove("show"), 4000);
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const rec = readForm();
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving…";
+  try {
+    if (editingId && editingId !== rec.id) {
+      await deleteDoc(doc(labelsCol, editingId));
+    }
+    await setDoc(doc(labelsCol, rec.id), rec);
+    showStatus(document.getElementById("addStatus"), "ok", editingId ? "Label updated." : "Label saved.");
+    exitEditMode();
+    form.reset();
+    previewFrame.srcdoc = "";
+    downloadPdfBtn.disabled = true;
+    await loadLabels();
+  } catch (err) {
+    showStatus(document.getElementById("addStatus"), "err", "Couldn't save — check your connection and try again.");
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save label";
+  }
+});
+
+function enterEditMode(rec) {
+  editingId = rec.id;
+  document.getElementById("addFormTitle").textContent = `Editing ID ${rec.id}`;
+  document.getElementById("addFormSub").textContent = "Update the details and save — this overwrites the existing record.";
+  document.getElementById("saveBtn").textContent = "Save changes";
+  document.getElementById("cancelEditBtn").style.display = "inline-block";
+  document.querySelector('[data-tab="add"]').click();
+  fillForm(rec);
+}
+function exitEditMode() {
+  editingId = null;
+  document.getElementById("addFormTitle").textContent = "Add a new employee";
+  document.getElementById("addFormSub").textContent = "Saves directly to the shared registry. No need to re-enter these details later.";
+  document.getElementById("saveBtn").textContent = "Save label";
+  document.getElementById("cancelEditBtn").style.display = "none";
+}
+document.getElementById("cancelEditBtn").addEventListener("click", () => {
+  exitEditMode();
+  form.reset();
+  previewFrame.srcdoc = "";
+  downloadPdfBtn.disabled = true;
+});
+
+/* ---------------- Firestore load / delete ---------------- */
+async function loadLabels() {
+  const q = query(labelsCol, orderBy("id"));
+  const snap = await getDocs(q);
+  allLabels = snap.docs.map(d => d.data());
+  renderDashboard();
+}
+
+async function deleteLabel(id) {
+  if (!confirm(`Delete label ID ${id}? This can't be undone.`)) return;
+  await deleteDoc(doc(labelsCol, id));
+  await loadLabels();
+}
+window.__deleteLabel = deleteLabel;
+
+/* ---------------- Dashboard rendering (registry table) ---------------- */
+const registryTable = document.getElementById("registryTable");
+const countPill = document.getElementById("countPill");
+const searchInput = document.getElementById("searchInput");
+
+function renderDashboard() {
+  const term = searchInput.value.trim().toLowerCase();
+  const filtered = allLabels.filter(r =>
+    !term || r.id.toLowerCase().includes(term) ||
+    r.nameEn.toLowerCase().includes(term) ||
+    (r.nameAr || "").includes(term)
+  );
+  countPill.textContent = `${filtered.length} record${filtered.length === 1 ? "" : "s"}`;
+
+  if (!allLabels.length) {
+    registryTable.innerHTML = `<tr><td style="border:none;">
+      <div class="empty-state">
+        <div class="eyebrow">Empty registry</div>
+        <p>No labels yet. Add your first employee, or bulk import from Excel.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  if (!filtered.length) {
+    registryTable.innerHTML = `<tr><td style="border:none;"><div class="empty-state"><p>No matches for "${escapeHtml(term)}".</p></div></td></tr>`;
+    return;
+  }
+
+  registryTable.innerHTML =
+    `<tr><th style="width:70px;">ID</th><th>Name</th><th>Title</th><th class="registry-actions">Actions</th></tr>` +
+    filtered.map(r => `
+      <tr>
+        <td><span class="registry-id">${escapeHtml(r.id)}</span></td>
+        <td>
+          <div class="registry-name">${escapeHtml(r.nameEn)}</div>
+          <div class="registry-name-ar">${escapeHtml(r.nameAr)}</div>
+        </td>
+        <td>
+          <div class="registry-title">${escapeHtml(r.titleEn)}</div>
+          <div class="registry-title-ar">${escapeHtml(r.titleAr)}</div>
+        </td>
+        <td class="registry-actions">
+          <button class="btn-text" onclick="window.__previewLabel('${escapeAttr(r.id)}')">Preview</button>
+          <button class="btn-text" onclick="window.__pdfLabel('${escapeAttr(r.id)}')">PDF</button>
+          <button class="btn-text" onclick="window.__editLabel('${escapeAttr(r.id)}')">Edit</button>
+          <button class="btn-text danger" onclick="window.__deleteLabel('${escapeAttr(r.id)}')">Delete</button>
+        </td>
+      </tr>
+    `).join("");
+}
+function escapeAttr(s){ return String(s).replace(/'/g, "\\'"); }
+
+searchInput.addEventListener("input", renderDashboard);
+
+window.__previewLabel = (id) => {
+  const rec = allLabels.find(r => r.id === id);
+  if (!rec) return;
+  document.getElementById("modalTitle").textContent = `ID ${rec.id} — ${rec.nameEn}`;
+  document.getElementById("modalFrame").srcdoc = labelDocument(rec);
+  document.getElementById("modalPdfBtn").onclick = () => downloadSinglePdf(rec, document.getElementById("modalPdfBtn"));
+  document.getElementById("modalBg").classList.add("show");
+};
+window.__pdfLabel = (id) => {
+  const rec = allLabels.find(r => r.id === id);
+  if (rec) downloadSinglePdf(rec, null);
+};
+window.__editLabel = (id) => {
+  const rec = allLabels.find(r => r.id === id);
+  if (rec) enterEditMode(rec);
+};
+document.getElementById("modalCloseBtn").addEventListener("click", () => document.getElementById("modalBg").classList.remove("show"));
+document.getElementById("modalBg").addEventListener("click", (e) => { if (e.target.id === "modalBg") e.target.classList.remove("show"); });
+
+document.getElementById("downloadAllBtn").addEventListener("click", () => {
+  const term = searchInput.value.trim().toLowerCase();
+  const filtered = allLabels.filter(r => !term || r.id.toLowerCase().includes(term) || r.nameEn.toLowerCase().includes(term));
+  if (!filtered.length) { showStatus(document.getElementById("dashStatus"), "err", "No labels to export."); return; }
+  downloadAllPdf(filtered);
+});
+
+/* ---------------- Bulk import ---------------- */
+const dropZone = document.getElementById("dropZone");
+const bulkFileInput = document.getElementById("bulkFileInput");
+dropZone.addEventListener("click", () => bulkFileInput.click());
+dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--primary)"; });
+dropZone.addEventListener("dragleave", () => { dropZone.style.borderColor = "var(--line)"; });
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.style.borderColor = "var(--line)";
+  if (e.dataTransfer.files[0]) handleBulkFile(e.dataTransfer.files[0]);
+});
+bulkFileInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) handleBulkFile(e.target.files[0]);
+});
+
+const HEADER_MAP = {
+  "id": "id", "employee id": "id",
+  "name en": "nameEn", "name (en)": "nameEn", "name english": "nameEn", "name (english)": "nameEn",
+  "name ar": "nameAr", "name (ar)": "nameAr", "name arabic": "nameAr", "name (arabic)": "nameAr",
+  "title en": "titleEn", "title (en)": "titleEn", "title english": "titleEn", "title (english)": "titleEn",
+  "title ar": "titleAr", "title (ar)": "titleAr", "title arabic": "titleAr", "title (arabic)": "titleAr",
+  "qr link": "qrLink", "qr code link": "qrLink", "link": "qrLink", "drive link": "qrLink",
+};
+
+function handleBulkFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const wb = XLSX.read(e.target.result, { type: "binary" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    processBulkRows(rows);
+  };
+  reader.readAsBinaryString(file);
+}
+
+function processBulkRows(rawRows) {
+  const existingIds = new Set(allLabels.map(r => r.id));
+  bulkRows = rawRows.map(raw => {
+    const rec = { id: "", nameEn: "", nameAr: "", titleEn: "", titleAr: "", qrLink: "" };
+    Object.keys(raw).forEach(key => {
+      const norm = key.trim().toLowerCase();
+      const field = HEADER_MAP[norm];
+      if (field) rec[field] = String(raw[key]).trim();
+    });
+    const missing = ["id","nameEn","nameAr","titleEn","titleAr","qrLink"].filter(f => !rec[f]);
+    rec.__valid = missing.length === 0;
+    rec.__missing = missing;
+    rec.__isUpdate = existingIds.has(rec.id);
+    return rec;
+  });
+  renderBulkPreview();
+}
+
+function renderBulkPreview() {
+  const wrap = document.getElementById("bulkPreviewWrap");
+  wrap.style.display = "block";
+  const valid = bulkRows.filter(r => r.__valid);
+  const invalid = bulkRows.filter(r => !r.__valid);
+  const updates = valid.filter(r => r.__isUpdate).length;
+  document.getElementById("bulkSummary").textContent =
+    `${bulkRows.length} rows found — ${valid.length} ready (${updates} will update existing IDs, ${valid.length - updates} new)${invalid.length ? `, ${invalid.length} skipped (missing fields)` : ""}.`;
+
+  const table = document.getElementById("bulkTable");
+  table.innerHTML = `<tr><th>Status</th><th>ID</th><th>Name (EN)</th><th>Name (AR)</th><th>Title (EN)</th><th>Title (AR)</th></tr>` +
+    bulkRows.map(r => `
+      <tr class="${r.__valid ? "" : "row-bad"}">
+        <td>${r.__valid ? (r.__isUpdate ? '<span class="tag tag-update">Update</span>' : '<span class="tag tag-new">New</span>') : `<span class="tag tag-bad">Missing ${r.__missing.join(", ")}</span>`}</td>
+        <td>${escapeHtml(r.id)}</td>
+        <td>${escapeHtml(r.nameEn)}</td>
+        <td dir="rtl">${escapeHtml(r.nameAr)}</td>
+        <td>${escapeHtml(r.titleEn)}</td>
+        <td dir="rtl">${escapeHtml(r.titleAr)}</td>
+      </tr>
+    `).join("");
+}
+
+document.getElementById("cancelImportBtn").addEventListener("click", () => {
+  bulkRows = [];
+  document.getElementById("bulkPreviewWrap").style.display = "none";
+  bulkFileInput.value = "";
+});
+
+document.getElementById("confirmImportBtn").addEventListener("click", async () => {
+  const valid = bulkRows.filter(r => r.__valid);
+  if (!valid.length) return;
+  const btn = document.getElementById("confirmImportBtn");
+  btn.disabled = true;
+  btn.textContent = "Importing…";
+  try {
+    for (let i = 0; i < valid.length; i += 450) {
+      const chunk = valid.slice(i, i + 450);
+      const batch = writeBatch(db);
+      chunk.forEach(r => {
+        const { __valid, __missing, __isUpdate, ...clean } = r;
+        batch.set(doc(labelsCol, clean.id), clean);
+      });
+      await batch.commit();
+    }
+    showStatus(document.getElementById("bulkStatus"), "ok", `Imported ${valid.length} labels.`);
+    bulkRows = [];
+    document.getElementById("bulkPreviewWrap").style.display = "none";
+    bulkFileInput.value = "";
+    await loadLabels();
+  } catch (err) {
+    showStatus(document.getElementById("bulkStatus"), "err", "Import failed partway through — check your connection and try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Import valid rows";
+  }
+});
+</script>
+</body>
+</html>
